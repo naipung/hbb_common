@@ -165,27 +165,8 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-// 修改后 - 使用 match（完全 const 兼容）
-pub const RENDEZVOUS_SERVERS: &[&str] = &[{
-    match option_env!("RS_ID_SERVER") {
-        Some(s) => s,  // 如果存在就直接使用（即使为空字符串）
-        None => "1.1.1.1",  // 只有不存在时才用默认值
-    }
-}];
-
-pub const RS_PUB_KEY: &str = {
-    match option_env!("RS_PUB_KEY") {
-        Some(s) => s,
-        None => "",  // 不存在时用空字符串
-    }
-};
-
-pub const API_SERVER: &str = {
-    match option_env!("RS_API_SERVER") {
-        Some(s) => s,
-        None => "https://1.1.1.1",
-    }
-};
+pub const RENDEZVOUS_SERVERS: &[&str] = &["naipung.ccwu.cc"];
+pub const RS_PUB_KEY: &str = "8TkLe3mzWoZv09FamZE0d+6uysqnOFBdM4h4wtjdiBQ=";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
