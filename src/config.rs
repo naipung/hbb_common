@@ -164,9 +164,11 @@ const CHARS: &[char] = &[
     '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
-// 使用 env! 宏在编译时强行读取环境变量
-pub const RENDEZVOUS_SERVERS: &[&str] = &[env!("RS_ID_SERVER")];
-pub const RS_PUB_KEY: &str = env!("RS_PUB_KEY");
+// 使用 env! 宏在编译时强行读取环境变量，没有则为空
+// 增加显式的 : &str 类型定义，确保类型绝对匹配
+pub const RENDEZVOUS_SERVERS: &[&str] = &[option_env!("RS_ID_SERVER").unwrap_or("")];
+pub const RS_PUB_KEY: &str = option_env!("RS_PUB_KEY").unwrap_or("");
+pub const API_SERVER: &str = option_env!("RS_API_SERVER").unwrap_or("");
 
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
