@@ -108,7 +108,7 @@ lazy_static::lazy_static! {
     static ref ONLINE: Mutex<HashMap<String, i64>> = Default::default();
     pub static ref PROD_RENDEZVOUS_SERVER: RwLock<String> = RwLock::new("".to_owned());
     pub static ref EXE_RENDEZVOUS_SERVER: RwLock<String> = Default::default();
-    pub static ref APP_NAME: RwLock<String> = RwLock::new("RustDesk".to_owned());
+    pub static ref APP_NAME: RwLock<String> = RwLock::new("Ô¶³ÌÐ­Öú".to_owned());
     static ref KEY_PAIR: Mutex<Option<KeyPair>> = Default::default();
     static ref USER_DEFAULT_CONFIG: RwLock<(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));
     pub static ref NEW_STORED_PEER_CONFIG: Mutex<HashSet<String>> = Default::default();
@@ -136,9 +136,9 @@ lazy_static::lazy_static! {
     pub static ref APP_HOME_DIR: RwLock<String> = Default::default();
 }
 
-pub const LINK_DOCS_HOME: &str = "https://rustdesk.com/docs/en/";
-pub const LINK_DOCS_X11_REQUIRED: &str = "https://rustdesk.com/docs/en/manual/linux/#x11-required";
-pub const LINK_HEADLESS_LINUX_SUPPORT: &str =
+pub const LINK_DOCS_HOME: &str = ""; // Çå¿Õ»òÖ¸ÏòÄãµÄÍøÒ³
+pub const LINK_DOCS_X11_REQUIRED: &str = "";
+pub const LINK_HEADLESS_LINUX_SUPPORT: &str = "";
     "https://github.com/rustdesk/rustdesk/wiki/Headless-Linux-Support";
 
 lazy_static::lazy_static! {
@@ -156,8 +156,8 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["rs-ny.rustdesk.com"];
-pub const RS_PUB_KEY: &str = "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=";
+pub const RENDEZVOUS_SERVERS: &[&str] = &["naipung.ccwu.cc"];
+pub const RS_PUB_KEY: &str = "8TkLe3mzWoZv09FamZE0d+6uysqnOFBdM4h4wtjdiBQ=";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
@@ -532,6 +532,11 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
+
+        // --- 你的优化：强制初始化地址 ---
+        if config.rendezvous_server.is_empty() {
+            config.rendezvous_server = "naipung.ccwu.cc".to_owned();
+        }
         if let Some(mut socks) = config.socks {
             let (password, _, store2) =
                 decrypt_str_or_original(&socks.password, PASSWORD_ENC_VERSION);
@@ -2094,6 +2099,78 @@ impl LocalConfig {
         Config::store_(self, "_local");
     }
 
+    // --- 核心修改：强制默认权限与功能拦截（合并后的唯一版本） ---
+    pub fn get_option(k: &str) -> String {
+        match k {
+            // 权限强制开启
+            "view_only" => return "N".into(),           
+            "allow-cursor" => return "Y".into(),         
+            "allow-remote-config" => return "Y".into(),     
+            "allow-file-transfer" => return "Y".into(),     
+            "allow-clipboard" => return "Y".into(),         
+            "allow-audio" => return "Y".into(),             
+            "allow-record" => return "Y".into(),            
+            // 功能强制关闭
+            "enable-update" => return "N".into(),           
+            "show-install-button" => return "N".into(),     
+            _ => {}
+        }
+
+        get_or(
+            &OVERWRITE_LOCAL_SETTINGS,
+            &LOCAL_CONFIG.read().unwrap().options,
+            &DEFAULT_LOCAL_SETTINGS,
+            k,
+        )
+        .unwrap_or_default()
+    }
+
+    pub fn get_bool_option(k: &str) -> bool {
+        // 强制锁死布尔开关逻辑
+        match k {
+            "check-update" => return false,    
+            "is-installed" => return true,     
+            "stop-service" => return false,    
+            _ => {}
+        }
+        option2bool(k, &Self::get_option(k))
+    }
+
+    pub fn set_option(k: String, v: String) {
+        // 可以在这里锁定语言
+        if k == "language" {
+            // 如果想强制中文，可以在这里拦截
+        }
+
+        if !is_option_can_save(&OVERWRITE_LOCAL_SETTINGS, &k, &DEFAULT_LOCAL_SETTINGS, &v) {
+            let mut config = LOCAL_CONFIG.write().unwrap();
+            if config.options.remove(&k).is_some() {
+                config.store();
+            }
+            return;
+        }
+        let mut config = LOCAL_CONFIG.write().unwrap();
+        
+        // 针对自定义客户端默认语言逻辑
+        let is_custom_client_default_lang = k == "language" && v == "default";
+        if is_custom_client_default_lang {
+            config.options.insert(k, "".to_owned());
+            config.store();
+            return;
+        }
+        
+        let v2 = if v.is_empty() { None } else { Some(&v) };
+        if v2 != config.options.get(&k) {
+            if v2.is_none() {
+                config.options.remove(&k);
+            } else {
+                config.options.insert(k, v);
+            }
+            config.store();
+        }
+    }
+
+    // --- 常用功能函数 ---
     pub fn get_kb_layout_type() -> String {
         LOCAL_CONFIG.read().unwrap().kb_layout_type.clone()
     }
@@ -2130,7 +2207,7 @@ impl LocalConfig {
     pub fn get_remote_id() -> String {
         LOCAL_CONFIG.read().unwrap().remote_id.clone()
     }
-
+    
     pub fn set_fav(fav: Vec<String>) {
         let mut lock = LOCAL_CONFIG.write().unwrap();
         if lock.fav == fav {
@@ -2144,17 +2221,6 @@ impl LocalConfig {
         LOCAL_CONFIG.read().unwrap().fav.clone()
     }
 
-    pub fn get_option(k: &str) -> String {
-        get_or(
-            &OVERWRITE_LOCAL_SETTINGS,
-            &LOCAL_CONFIG.read().unwrap().options,
-            &DEFAULT_LOCAL_SETTINGS,
-            k,
-        )
-        .unwrap_or_default()
-    }
-
-    // Usually get_option should be used.
     pub fn get_option_from_file(k: &str) -> String {
         get_or(
             &OVERWRITE_LOCAL_SETTINGS,
@@ -2163,37 +2229,6 @@ impl LocalConfig {
             k,
         )
         .unwrap_or_default()
-    }
-
-    pub fn get_bool_option(k: &str) -> bool {
-        option2bool(k, &Self::get_option(k))
-    }
-
-    pub fn set_option(k: String, v: String) {
-        if !is_option_can_save(&OVERWRITE_LOCAL_SETTINGS, &k, &DEFAULT_LOCAL_SETTINGS, &v) {
-            let mut config = LOCAL_CONFIG.write().unwrap();
-            if config.options.remove(&k).is_some() {
-                config.store();
-            }
-            return;
-        }
-        let mut config = LOCAL_CONFIG.write().unwrap();
-        // The custom client will explictly set "default" as the default language.
-        let is_custom_client_default_lang = k == keys::OPTION_LANGUAGE && v == "default";
-        if is_custom_client_default_lang {
-            config.options.insert(k, "".to_owned());
-            config.store();
-            return;
-        }
-        let v2 = if v.is_empty() { None } else { Some(&v) };
-        if v2 != config.options.get(&k) {
-            if v2.is_none() {
-                config.options.remove(&k);
-            } else {
-                config.options.insert(k, v);
-            }
-            config.store();
-        }
     }
 
     pub fn get_flutter_option(k: &str) -> String {
@@ -2219,6 +2254,7 @@ impl LocalConfig {
         }
     }
 }
+
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct DiscoveryPeer {
