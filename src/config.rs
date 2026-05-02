@@ -1286,14 +1286,65 @@ impl Config {
         }
     }
 
+    //生成开始
+
     pub fn update_id() {
-        // to-do: how about if one ip register a lot of ids?
         let id = Self::get_id();
         let mut rng = rand::thread_rng();
-        let new_id = rng.gen_range(1_000_000_000..2_000_000_000).to_string();
+        
+        // 检测设备类型
+        let is_mobile = cfg!(any(
+            target_os = "android",
+            target_os = "ios",
+            target_os = "harmonyos"
+        ));
+        
+        // 检查当前 ID 格式是否正确
+        let format_valid = if id.len() == 6 {
+            if let Some(last_char) = id.chars().last() {
+                if let Some(last_digit) = last_char.to_digit(10) {
+                    // 手机端尾号应为奇数，PC端尾号应为偶数
+                    if is_mobile {
+                        last_digit % 2 != 0
+                    } else {
+                        last_digit % 2 == 0
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        
+        // 格式正确就不重置，直接返回
+        if format_valid {
+            log::info!("ID format is valid: {}", id);
+            return;
+        }
+        
+        // 格式错误，重置 ID
+        log::info!("ID format invalid (old: {}), regenerating...", id);
+        
+        // 生成前5位（10,000 到 99,999）
+        let prefix = rng.gen_range(10_000..100_000);
+        
+        // 生成尾号：手机端奇数，PC端偶数
+        let last_digit = if is_mobile {
+            rng.gen_range(0..5) * 2 + 1  // 1,3,5,7,9
+        } else {
+            rng.gen_range(0..5) * 2      // 0,2,4,6,8
+        };
+        
+        let new_id = format!("{}{}", prefix, last_digit);
+        
         Config::set_id(&new_id);
-        log::info!("id updated from {} to {}", id, new_id);
+        log::info!("ID reset to: {}", new_id);
     }
+
+    //生成结束
 
     pub fn set_permanent_password(password: &str) {
         if Self::is_disable_change_permanent_password() {
