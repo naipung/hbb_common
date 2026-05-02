@@ -542,9 +542,10 @@ impl Config2 {
             config.options.insert("verification-method".to_string(), "use-permanent-password".to_string());
             store = true;
         }
-        // 设置为：一次性密码为数字
-        if !config.options.contains_key("otp-digit-only") {
-            config.options.insert("otp-digit-only".to_string(), "Y".to_string());
+
+        // 3. 设置为：一次性密码为数字（官方键名）
+        if !config.options.contains_key("allow-numeric-one-time-password") {
+            config.options.insert("allow-numeric-one-time-password".to_string(), "Y".to_string());
             store = true;
         }
         if let Some(mut socks) = config.socks {
