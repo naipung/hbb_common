@@ -119,16 +119,7 @@ lazy_static::lazy_static! {
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    // pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    // 替换为：
-    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
-        let mut map = HashMap::new();
-        // 强制设置隐藏托盘图标
-        map.insert("hide-tray".to_string(), "Y".to_string());
-        // 如果你以后想默认开启“禁止修改设置”，也可以在这里加一行：
-        // map.insert("deny-lan-discovery".to_string(), "Y".to_string()); 
-        RwLock::new(map)
-    };
+    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
 }
 
 #[cfg(target_os = "android")]
@@ -701,31 +692,23 @@ impl Config {
             id_valid = true;
             store = true;
         }
-
-        // 修改这里：使用 update_id 生成6位ID
         if !id_valid {
             log::warn!("ID is invalid, generating new one");
-            Self::update_id();  // ← 改成调用 update_id
-            // 注意：update_id 会直接修改保存的 ID，所以需要重新读取
-            config.id = Self::get_id();
-            store = true;
+            for _ in 0..3 {
+                if let Some(id) = Config::gen_id() {
+                    config.id = id;
+                    store = true;
+                    break;
+                } else {
+                    log::error!("Failed to generate new id");
+                }
+            }
         }
-    
-        // 额外检查：确保现有ID是6位格式
-        if config.id.len() != 6 {
-            log::warn!("ID length is not 6 (current: {}), regenerating...", config.id.len());
-            Self::update_id();
-            config.id = Self::get_id();
-            store = true;
-        }
-    
         if store {
             config.store();
         }
         config
     }
-
-
 
     fn migrate_permanent_password_to_hashed_storage(config: &mut Config) -> bool {
         if config.password.is_empty() || is_permanent_password_hashed_storage(&config.password) {
@@ -1311,65 +1294,14 @@ impl Config {
         }
     }
 
-    //生成开始
-
     pub fn update_id() {
+        // to-do: how about if one ip register a lot of ids?
         let id = Self::get_id();
         let mut rng = rand::thread_rng();
-        
-        // 检测设备类型
-        let is_mobile = cfg!(any(
-            target_os = "android",
-            target_os = "ios",
-            target_os = "harmonyos"
-        ));
-        
-        // 检查当前 ID 格式是否正确
-        let format_valid = if id.len() == 6 {
-            if let Some(last_char) = id.chars().last() {
-                if let Some(last_digit) = last_char.to_digit(10) {
-                    // 手机端尾号应为奇数，PC端尾号应为偶数
-                    if is_mobile {
-                        last_digit % 2 != 0
-                    } else {
-                        last_digit % 2 == 0
-                    }
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-        
-        // 格式正确就不重置，直接返回
-        if format_valid {
-            log::info!("ID format is valid: {}", id);
-            return;
-        }
-        
-        // 格式错误，重置 ID
-        log::info!("ID format invalid (old: {}), regenerating...", id);
-        
-        // 生成前5位（10,000 到 99,999）
-        let prefix = rng.gen_range(10_000..100_000);
-        
-        // 生成尾号：手机端奇数，PC端偶数
-        let last_digit = if is_mobile {
-            rng.gen_range(0..5) * 2 + 1  // 1,3,5,7,9
-        } else {
-            rng.gen_range(0..5) * 2      // 0,2,4,6,8
-        };
-        
-        let new_id = format!("{}{}", prefix, last_digit);
-        
+        let new_id = rng.gen_range(1_000_000_000..2_000_000_000).to_string();
         Config::set_id(&new_id);
-        log::info!("ID reset to: {}", new_id);
+        log::info!("id updated from {} to {}", id, new_id);
     }
-
-    //生成结束
 
     pub fn set_permanent_password(password: &str) {
         if Self::is_disable_change_permanent_password() {
