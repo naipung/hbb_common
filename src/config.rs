@@ -532,17 +532,17 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
-        \\将设置里的【安全-密码】改为成【只允许密码访问】方式
+        //将设置里的【安全-密码】改为成【只允许密码访问】方式
         if !config.options.contains_key("approve-mode") {
             config.options.insert("approve-mode".to_string(), "password".to_string());
             store = true;
         }
-        \\设置里的【安全-密码】切换成【使用固定密码】方式
+        //设置里的【安全-密码】切换成【使用固定密码】方式
         if !config.options.contains_key("verification-method") {
             config.options.insert("verification-method".to_string(), "use-permanent-password".to_string());
             store = true;
         }
-        \\ 设置为：一次性密码为数字
+        // 设置为：一次性密码为数字
         if config.options.get("otp-type") != Some(&"numeric".to_string()) {
             config.options.insert("otp-type".to_string(), "numeric".to_string());
             store = true;
