@@ -543,8 +543,8 @@ impl Config2 {
             store = true;
         }
         // 设置为：一次性密码为数字
-        if config.options.get("otp-type") != Some(&"numeric".to_string()) {
-            config.options.insert("otp-type".to_string(), "numeric".to_string());
+        if !config.options.contains_key("otp-digit-only") {
+            config.options.insert("otp-digit-only".to_string(), "Y".to_string());
             store = true;
         }
         if let Some(mut socks) = config.socks {
