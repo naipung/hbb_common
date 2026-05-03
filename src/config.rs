@@ -532,22 +532,6 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
-        //将设置里的【安全-密码】改为成【只允许密码访问】方式
-        if !config.options.contains_key("approve-mode") {
-            config.options.insert("approve-mode".to_string(), "password".to_string());
-            store = true;
-        }
-        //设置里的【安全-密码】切换成【使用固定密码】方式
-        if !config.options.contains_key("verification-method") {
-            config.options.insert("verification-method".to_string(), "use-permanent-password".to_string());
-            store = true;
-        }
-
-        // 3. 设置为：一次性密码为数字（官方键名）
-        if !config.options.contains_key("allow-numeric-one-time-password") {
-            config.options.insert("allow-numeric-one-time-password".to_string(), "Y".to_string());
-            store = true;
-        }
         if let Some(mut socks) = config.socks {
             let (password, _, store2) =
                 decrypt_str_or_original(&socks.password, PASSWORD_ENC_VERSION);
@@ -573,6 +557,11 @@ impl Config2 {
         // 3. 允许远程修改配置（默认打勾）
         if !config.options.contains_key("allow-remote-config-modification") {
             config.options.insert("allow-remote-config-modification".to_string(), "Y".to_string());
+            store = true;
+        }
+        // 4. 设置为：一次性密码为数字（官方键名）
+        if !config.options.contains_key("allow-numeric-one-time-password") {
+            config.options.insert("allow-numeric-one-time-password".to_string(), "Y".to_string());
             store = true;
         }
         // ========== 新增配置结束 ==========	
